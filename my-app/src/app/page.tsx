@@ -1,101 +1,213 @@
-import Image from "next/image";
+"use client";
+// If you're using Next.js 13+ and want client-side rendering, keep this. Otherwise, you can remove it.
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+import React from "react";
+import Sketch from "react-p5";
+import type p5Types from "p5";
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
-}
+// Adjust these to change grid size, etc.
+const baseCellSize = 20; // Base size of each cell in the grid
+const speed = 0.9; // Speed factor for animation (not used in this snippet)
+
+// Scale factors for sampling noise
+// The larger this is, the more "stretched" the color bands will be.
+let noiseScaleX = 0.05;
+let noiseScaleY = 0.05;
+
+const MosaicTrianglesPerlin: React.FC = () => {
+  // Calculate the number of columns and rows based on the window size
+  const calculateGridSize = (p5: p5Types) => {
+    const dynamicCellSize = Math.max(baseCellSize, p5.windowWidth / 50);
+    const cols = Math.floor(p5.windowWidth / dynamicCellSize);
+    const rows = Math.floor(p5.windowHeight / dynamicCellSize);
+    return { cols, rows, dynamicCellSize };
+  };
+
+  /**
+   * Called once at the start by react-p5.
+   * We initialize our canvas + color mode here.
+   */
+  const setup = (p5: p5Types, canvasParentRef: Element) => {
+    // Calculate grid size
+    const { cols, rows, dynamicCellSize } = calculateGridSize(p5);
+
+    // Create a canvas with the window size
+    p5.createCanvas(p5.windowWidth, p5.windowHeight).parent(canvasParentRef);
+
+    // Use HSB mode so we can easily manipulate hue, saturation, brightness
+    p5.colorMode(p5.HSB, 360, 100, 100, 100);
+
+    // Adjust noise scale based on dynamic cell size
+    noiseScaleX = 0.1 / dynamicCellSize;
+    noiseScaleY = 0.1 / dynamicCellSize;
+  };
+
+  /**
+   * Called every frame (60x/sec by default).
+   * We'll draw the entire grid each time to see transitions,
+   * or you can noLoop() in setup if you only need a static image.
+   */
+  const draw = (p5: p5Types) => {
+    console.log("Draw function is running");
+    // Clear background each frame: (hue=0,sat=0,bri=100 => white in HSB)
+    p5.background(0, 0, 100);
+
+    // Calculate grid size
+    const { cols, rows, dynamicCellSize } = calculateGridSize(p5);
+
+    // Loop over grid cells
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        // Top-left corner of cell in pixel coordinates
+        const px = x * dynamicCellSize;
+        const py = y * dynamicCellSize;
+
+        // Draw 4 triangles subdividing this cell
+        drawColoredTriangles(p5, px, py, dynamicCellSize);
+      }
+    }
+  };
+
+  /**
+   * Draws a square subdivided by an 'X' -> 4 triangles
+   * We'll fill each triangle with a Perlin-noise based color.
+   */
+  const drawColoredTriangles = (
+    p5: p5Types,
+    px: number,
+    py: number,
+    s: number
+  ) => {
+    // Time-based factor for oscillation
+    const timeFactor = p5.sin(p5.frameCount * 0.05);
+
+    // Coordinates for corners of the cell
+    const topLeft = { x: px, y: py };
+    const topRight = { x: px + s, y: py };
+    const bottomLeft = { x: px, y: py + s };
+    const bottomRight = { x: px + s, y: py + s };
+
+    // Center point with oscillation
+    const center = {
+      x: px + s / 2 + timeFactor * s * 0.1,
+      y: py + s / 2 + timeFactor * s * 0.1,
+    };
+
+    // Midpoints for each side of the triangles
+    const midTop = {
+      x: (topLeft.x + topRight.x) / 0.5,
+      y: (topLeft.y + topRight.y) / 0.5,
+    };
+    const midLeft = {
+      x: (topLeft.x + bottomLeft.x) / 0.5,
+      y: (topLeft.y + bottomLeft.y) / 0.5,
+    };
+    const midRight = {
+      x: (topRight.x + bottomRight.x) / 0.5,
+      y: (topRight.y + bottomRight.y) / 0.5,
+    };
+    const midBottom = {
+      x: (bottomLeft.x + bottomRight.x) / 0.5,
+      y: (bottomLeft.y + bottomRight.y) / 0.5,
+    };
+
+    // Draw smaller triangles within each original triangle
+    // Triangle #1: top-left -> midTop -> center
+    fillPerlinColor(p5, topLeft.x, topLeft.y);
+    p5.triangle(topLeft.x, topLeft.y, midTop.x, midTop.y, center.x, center.y);
+
+    // Triangle #2: midTop -> top-right -> center
+    fillPerlinColor(p5, midTop.x, midTop.y);
+    p5.triangle(midTop.x, midTop.y, topRight.x, topRight.y, center.x, center.y);
+
+    // Triangle #3: top-left -> center -> midLeft
+    fillPerlinColor(p5, topLeft.x, midLeft.y);
+    p5.triangle(topLeft.x, topLeft.y, center.x, center.y, midLeft.x, midLeft.y);
+
+    // Triangle #4: midLeft -> center -> bottom-left
+    fillPerlinColor(p5, midBottom.x, midLeft.y);
+    p5.triangle(
+      midLeft.x,
+      midLeft.y,
+      center.x,
+      center.y,
+      bottomLeft.x,
+      bottomLeft.y
+    );
+
+    // Triangle #5: top-right -> midRight -> center
+    fillPerlinColor(p5, bottomRight.x, midRight.y);
+    p5.triangle(
+      topRight.x,
+      topRight.y,
+      midRight.x,
+      midRight.y,
+      center.x,
+      center.y
+    );
+
+    // Triangle #6: midRight -> bottom-right -> center
+    fillPerlinColor(p5, bottomRight.x, midRight.y);
+    p5.triangle(
+      midRight.x,
+      midRight.y,
+      bottomRight.x,
+      bottomRight.y,
+      center.x,
+      center.y
+    );
+
+    // Triangle #7: bottom-left -> center -> midBottom
+    fillPerlinColor(p5, bottomLeft.x, midBottom.y);
+    p5.triangle(
+      bottomLeft.x,
+      bottomLeft.y,
+      center.x,
+      center.y,
+      midBottom.x,
+      midBottom.y
+    );
+
+    // Triangle #8: midBottom -> bottom-right -> center
+    fillPerlinColor(p5, topRight.x, topRight.y);
+    p5.triangle(
+      midBottom.x,
+      midBottom.y,
+      bottomRight.x,
+      bottomRight.y,
+      center.x,
+      center.y
+    );
+  };
+
+  /**
+   * fillPerlinColor:
+   *   - Samples Perlin noise at (x * noiseScaleX, y * noiseScaleY),
+   *   - Scales that 0..1 range to 0..360 for the hue,
+   *   - Optionally randomizes or sets saturation/brightness/alpha.
+   */
+  const fillPerlinColor = (p5: p5Types, x: number, y: number) => {
+    // Sample the noise field to get a float [0..1]
+    const n = p5.noise(
+      (x + p5.frameCount * 10) * noiseScaleX,
+      (y + p5.frameCount * 10) * noiseScaleY
+    );
+
+    // Use noise for saturation and brightness for more dynamic colors
+    const satVal = p5.noise(x * 0.1, y * 0.1) * 140;
+    const briVal =
+      p5.noise(x * 0.1 + p5.frameCount * 0.01, y * 0.1 + 100) * 100;
+    const alphaVal = 90; // set alpha to be semi-opaque
+
+    // Map 'n' to a hue in the range for oranges and blues
+    const hueVal = n < 0.3 ? n * 80 : 180 + (n - 0.6) * Math.random() * 0.01;
+
+    p5.fill(hueVal, satVal, briVal, alphaVal);
+    p5.noStroke();
+  };
+
+  // Return our Sketch with the above setup + draw
+  return <Sketch setup={setup} draw={draw} />;
+};
+
+export default MosaicTrianglesPerlin;
