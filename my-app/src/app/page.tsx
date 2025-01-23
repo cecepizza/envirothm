@@ -93,44 +93,86 @@ const MosaicTrianglesPerlin: React.FC = () => {
       y: py + s / 2 + timeFactor * s * 0.1,
     };
 
-    // Triangle #1: top-left -> top-right -> center
-    fillPerlinColor(p5, topLeft.x, topLeft.y);
-    p5.triangle(
-      topLeft.x,
-      topLeft.y,
-      topRight.x,
-      topRight.y,
-      center.x,
-      center.y
-    );
+    // Midpoints for each side of the triangles
+    const midTop = {
+      x: (topLeft.x + topRight.x) / 0.5,
+      y: (topLeft.y + topRight.y) / 0.5,
+    };
+    const midLeft = {
+      x: (topLeft.x + bottomLeft.x) / 0.5,
+      y: (topLeft.y + bottomLeft.y) / 0.5,
+    };
+    const midRight = {
+      x: (topRight.x + bottomRight.x) / 0.5,
+      y: (topRight.y + bottomRight.y) / 0.5,
+    };
+    const midBottom = {
+      x: (bottomLeft.x + bottomRight.x) / 0.5,
+      y: (bottomLeft.y + bottomRight.y) / 0.5,
+    };
 
-    // Triangle #2: top-left -> center -> bottom-left
-    fillPerlinColor(p5, topLeft.x, bottomLeft.y);
+    // Draw smaller triangles within each original triangle
+    // Triangle #1: top-left -> midTop -> center
+    fillPerlinColor(p5, topLeft.x, topLeft.y);
+    p5.triangle(topLeft.x, topLeft.y, midTop.x, midTop.y, center.x, center.y);
+
+    // Triangle #2: midTop -> top-right -> center
+    fillPerlinColor(p5, midTop.x, midTop.y);
+    p5.triangle(midTop.x, midTop.y, topRight.x, topRight.y, center.x, center.y);
+
+    // Triangle #3: top-left -> center -> midLeft
+    fillPerlinColor(p5, topLeft.x, midLeft.y);
+    p5.triangle(topLeft.x, topLeft.y, center.x, center.y, midLeft.x, midLeft.y);
+
+    // Triangle #4: midLeft -> center -> bottom-left
+    fillPerlinColor(p5, midBottom.x, midLeft.y);
     p5.triangle(
-      topLeft.x,
-      topLeft.y,
+      midLeft.x,
+      midLeft.y,
       center.x,
       center.y,
       bottomLeft.x,
       bottomLeft.y
     );
 
-    // Triangle #3: top-right -> bottom-right -> center
-    fillPerlinColor(p5, bottomRight.x, topRight.y);
+    // Triangle #5: top-right -> midRight -> center
+    fillPerlinColor(p5, bottomRight.x, midRight.y);
     p5.triangle(
       topRight.x,
       topRight.y,
+      midRight.x,
+      midRight.y,
+      center.x,
+      center.y
+    );
+
+    // Triangle #6: midRight -> bottom-right -> center
+    fillPerlinColor(p5, bottomRight.x, midRight.y);
+    p5.triangle(
+      midRight.x,
+      midRight.y,
       bottomRight.x,
       bottomRight.y,
       center.x,
       center.y
     );
 
-    // Triangle #4: bottom-left -> bottom-right -> center
-    fillPerlinColor(p5, bottomRight.x, bottomRight.y);
+    // Triangle #7: bottom-left -> center -> midBottom
+    fillPerlinColor(p5, bottomLeft.x, midBottom.y);
     p5.triangle(
       bottomLeft.x,
       bottomLeft.y,
+      center.x,
+      center.y,
+      midBottom.x,
+      midBottom.y
+    );
+
+    // Triangle #8: midBottom -> bottom-right -> center
+    fillPerlinColor(p5, topRight.x, topRight.y);
+    p5.triangle(
+      midBottom.x,
+      midBottom.y,
       bottomRight.x,
       bottomRight.y,
       center.x,
@@ -158,7 +200,7 @@ const MosaicTrianglesPerlin: React.FC = () => {
     const alphaVal = 90; // set alpha to be semi-opaque
 
     // Map 'n' to a hue in the range for oranges and blues
-    const hueVal = n < 0.5 ? n * 80 : 180 + (n - 0.6) * Math.random() * 0.01;
+    const hueVal = n < 0.3 ? n * 80 : 180 + (n - 0.6) * Math.random() * 0.01;
 
     p5.fill(hueVal, satVal, briVal, alphaVal);
     p5.noStroke();
